@@ -354,6 +354,60 @@ class LoadMultiViewImageFromFiles(object):
 
 
 @OPENOCC_TRANSFORMS.register_module()
+class PrepapreImageInputs(object):
+    """Prepare the original mage inputs for the SSL.
+    """
+    def __init__(self, 
+                 img_size, 
+                 norm_cfg=None,
+                 load_future_img=False,
+                 load_prev_img=False,
+                 **kwargs):
+        self.input_size = img_size  # (h, w)
+        if norm_cfg is not None:
+            self.mean = norm_cfg['mean']
+            self.std = norm_cfg['std']
+        else:
+            self.mean = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+            self.std = np.array([255.0, 255.0, 255.0], dtype=np.float32)
+
+        self.load_prev_img = load_prev_img
+        self.load_future_img = load_future_img
+    
+    def transform_core(self, 
+                       img, 
+                       img_size, # (h, w)
+                       to_rgb=True):
+        ## we need [0, 1] images in RGB order
+        img = mmcv.imresize(img, img_size[::-1])
+        img = mmcv.imnormalize(np.array(img), self.mean, self.std, to_rgb)
+        return img
+    
+    def __call__(self, results):
+        img_aug = deepcopy(results['img'])
+
+        ## resize the image
+        imgs = [
+            self.transform_core(img, self.input_size)
+            for img in img_aug
+        ]
+
+        # process multiple imgs in single frame
+        imgs = [img.transpose(2, 0, 1) for img in imgs]
+        results['target_imgs'] = np.ascontiguousarray(np.stack(imgs, axis=0))
+
+        results['K'] = torch.from_numpy(results['cam_intrinsic']).to(torch.float32)
+        ## process the intrinsic matrix
+        ori_shape = results['img_shape'][0]
+        origin_h, origin_w = ori_shape[0], ori_shape[1]
+        h, w = self.input_size[0], self.input_size[1]
+        results['K'][:, 0] *= w / origin_w
+        results['K'][:, 1] *= h / origin_h
+        results['inv_K'] = torch.pinverse(results['K'])
+        return results
+
+
+@OPENOCC_TRANSFORMS.register_module()
 class LoadPointFromFile(object):
 
     def __init__(self, pc_range, num_pts, use_ego=False):

@@ -11,7 +11,9 @@ class SparseGaussian3DEncoder(BaseModule):
         embed_dims: int = 256, 
         include_opa=True,
         semantics=False,
-        semantic_dim=None
+        semantic_dim=None,
+        include_color=False,
+        sh_degree=4,
     ):
         super().__init__()
         self.embed_dims = embed_dims
@@ -33,6 +35,15 @@ class SparseGaussian3DEncoder(BaseModule):
         else:
             semantic_dim = 0
         self.semantic_dim = semantic_dim            
+
+        self.include_color = include_color
+        if include_color:
+            self.d_sh = (sh_degree + 1) ** 2
+            color_dim = 3 * self.d_sh
+
+            self.color_fc = embedding_layer(color_dim)
+            self.color_dim_start = 10 + int(include_opa) + semantic_dim
+
         self.output_fc = embedding_layer(self.embed_dims)
 
     def forward(self, box_3d: torch.Tensor):
@@ -48,6 +59,11 @@ class SparseGaussian3DEncoder(BaseModule):
         else:
             semantic_feat = 0.
 
-        output = xyz_feat + scale_feat + rot_feat + opacity_feat + semantic_feat
+        if self.include_color:
+            color_feat = self.color_fc(box_3d[..., self.color_dim_start:])
+        else:
+            color_feat = 0.
+        
+        output = xyz_feat + scale_feat + rot_feat + opacity_feat + semantic_feat + color_feat
         output = self.output_fc(output)
         return output

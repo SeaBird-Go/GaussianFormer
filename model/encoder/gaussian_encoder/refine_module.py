@@ -3,6 +3,7 @@ from mmengine.model import BaseModule
 from mmcv.cnn import Scale
 import torch.nn as nn, torch
 import torch.nn.functional as F
+from einops import rearrange, repeat
 from .utils import linear_relu_ln, GaussianPrediction
 from ...utils.safe_ops import safe_sigmoid
 
@@ -20,6 +21,8 @@ class SparseGaussian3DRefinementModule(BaseModule):
         semantics=False,
         semantic_dim=None,
         include_opa=True,
+        include_color=False,
+        sh_degree=4,
         semantics_activation='softmax',
         xyz_activation="sigmoid",
         scale_activation="sigmoid",
@@ -32,8 +35,21 @@ class SparseGaussian3DRefinementModule(BaseModule):
             assert semantic_dim is not None
         else:
             semantic_dim = 0
+
+        color_dim = 0
+        self.include_color = include_color
+        if include_color:
+            self.d_sh = (sh_degree + 1) ** 2
+            self.register_buffer(
+                "sh_mask",
+                torch.ones((self.d_sh,), dtype=torch.float32),
+                persistent=False,
+            )
+            for degree in range(1, sh_degree + 1):
+                self.sh_mask[degree**2 : (degree + 1) ** 2] = 0.1 * 0.25**degree
+            color_dim = 3 * self.d_sh
                 
-        self.output_dim = 10 + int(include_opa) + semantic_dim
+        self.output_dim = 10 + int(include_opa) + semantic_dim + color_dim
         self.semantic_start = 10 + int(include_opa)
         self.semantic_dim = semantic_dim
         self.include_opa = include_opa
@@ -112,13 +128,21 @@ class SparseGaussian3DRefinementModule(BaseModule):
             semantics = semantics.softmax(dim=-1)
         elif self.semantics_activation == 'softplus':
             semantics = F.softplus(semantics)
+
+        ## process the color
+        harmonics = None
+        if self.include_color:
+            sh = output[..., (self.semantic_start + self.semantic_dim):]
+            sh = rearrange(sh, "... (xyz d_sh) -> ... xyz d_sh", xyz=3)
+            harmonics = sh * self.sh_mask
         
         gaussian = GaussianPrediction(
             means=xyz,
             scales=gs_scales,
             rotations=rot,
             opacities=safe_sigmoid(output[..., 10: (10 + int(self.include_opa))]),
-            semantics=semantics
+            semantics=semantics,
+            harmonics=harmonics
         )
         return output, gaussian #, semantics
 

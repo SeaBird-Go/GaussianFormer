@@ -119,6 +119,7 @@ class NuScenesDataset(Dataset):
         ego2image_rts = []
         cam_positions = []
         focal_positions = []
+        cam_intrinsics = []
 
         lidar2ego_r = Quaternion(info['data']['LIDAR_TOP']['calib']['rotation']).rotation_matrix
         lidar2ego = np.eye(4)
@@ -144,6 +145,7 @@ class NuScenesDataset(Dataset):
             intrinsic = info['data'][cam_type]['calib']['camera_intrinsic']
             viewpad = np.eye(4)
             viewpad[:3, :3] = intrinsic
+            cam_intrinsics.append(viewpad)
             cam_position = img2lidar @ viewpad @ np.array([0., 0., 0., 1.]).reshape([4, 1])
             cam_positions.append(cam_position.flatten()[:3])
             focal_position = img2lidar @ viewpad @ np.array([0., 0., f, 1.]).reshape([4, 1])
@@ -161,9 +163,26 @@ class NuScenesDataset(Dataset):
             lidar2img=np.asarray(lidar2img_rts),
             ego2img=np.asarray(ego2image_rts),
             cam_positions=np.asarray(cam_positions),
-            focal_positions=np.asarray(focal_positions))
+            focal_positions=np.asarray(focal_positions),
+            cam_intrinsic=np.asarray(cam_intrinsics))
 
         return input_dict
 
     def __len__(self):
         return len(self.keyframes)
+    
+
+@OPENOCC_DATASET.register_module()
+class NuScenesDatasetOverfit(NuScenesDataset):
+    def __init__(
+        self,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        
+    def __len__(self):
+        return 1000
+    
+    def __getitem__(self, idx):
+        idx = 50
+        return super().__getitem__(idx)

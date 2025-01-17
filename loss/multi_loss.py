@@ -27,7 +27,7 @@ class MultiLoss(nn.Module):
         tot_loss = 0.
         for loss_func in self.losses:
             loss = loss_func(inputs)
-            tot_loss += loss
+            tot_loss = tot_loss + loss
             loss_dict.update({
                 loss_func.__class__.__name__: \
                 loss.detach().item()
