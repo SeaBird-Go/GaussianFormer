@@ -59,6 +59,31 @@ def get_lidar2global(calib_dict, pose_dict):
     return lidar2global
 
 
+def get_lidar2cam(cam_calib_dict, cam_pose_dict, lidar2global):
+    """Get the transformation matrix from lidar to camera
+
+    Args:
+        cam_calib_dict (dict): contains the camera to ego transformation
+        cam_pose_dict (dict): contains the ego to global transformation
+        lidar2global (np.ndarray): the transformation matrix from lidar to global
+
+    Returns:
+        np.ndarray: the transformation matrix from lidar to camera
+    """
+    cam2ego = np.eye(4)
+    cam2ego[:3, :3] = Quaternion(cam_calib_dict['rotation']).rotation_matrix
+    cam2ego[:3, 3] = np.asarray(cam_calib_dict['translation']).T
+
+    ego2global = np.eye(4)
+    ego2global[:3, :3] = Quaternion(cam_pose_dict['rotation']).rotation_matrix
+    ego2global[:3, 3] = np.asarray(cam_pose_dict['translation']).T
+
+    cam2global = ego2global @ cam2ego
+
+    lidar2cam = np.linalg.inv(cam2global) @ lidar2global
+    return lidar2cam
+
+
 def custom_collate_fn_temporal(instances):
     return_dict = {}
     for k, v in instances[0].items():

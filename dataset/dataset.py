@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 import mmengine
 from . import OPENOCC_DATASET, OPENOCC_TRANSFORMS
-from .utils import get_img2global, get_lidar2global
+from .utils import get_img2global, get_lidar2global, get_lidar2cam
 
 
 @OPENOCC_DATASET.register_module()
@@ -120,6 +120,7 @@ class NuScenesDataset(Dataset):
         cam_positions = []
         focal_positions = []
         cam_intrinsics = []
+        lidar2cam_rts = []
 
         lidar2ego_r = Quaternion(info['data']['LIDAR_TOP']['calib']['rotation']).rotation_matrix
         lidar2ego = np.eye(4)
@@ -140,6 +141,10 @@ class NuScenesDataset(Dataset):
 
             lidar2img_rts.append(lidar2img)
             ego2image_rts.append(np.linalg.inv(img2global) @ ego2global)
+
+            lidar2cam = get_lidar2cam(
+                info['data'][cam_type]['calib'], info['data'][cam_type]['pose'], lidar2global)
+            lidar2cam_rts.append(lidar2cam)
 
             img2lidar = np.linalg.inv(lidar2global) @ img2global
             intrinsic = info['data'][cam_type]['calib']['camera_intrinsic']
@@ -164,7 +169,9 @@ class NuScenesDataset(Dataset):
             ego2img=np.asarray(ego2image_rts),
             cam_positions=np.asarray(cam_positions),
             focal_positions=np.asarray(focal_positions),
-            cam_intrinsic=np.asarray(cam_intrinsics))
+            cam_intrinsic=np.asarray(cam_intrinsics),
+            lidar2cam=np.asarray(lidar2cam_rts)
+            )
 
         return input_dict
 

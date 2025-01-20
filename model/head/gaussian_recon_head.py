@@ -96,9 +96,9 @@ class GaussianReconHead(BaseTaskHead):
             raise NotImplementedError
 
         intrinsics = metas['K'].to(self.zero_tensor.device)  # (bs, 6, 4, 4)
-        projection_mat = metas['projection_mat'].to(self.zero_tensor.device)
+        lidar2cam = metas['lidar2cam'].to(self.zero_tensor.device)
         extrinsics = torch.inverse(
-            intrinsics.new_tensor(projection_mat)
+            intrinsics.new_tensor(lidar2cam)
         )  # cam2lidar
 
         intrinsics = intrinsics[..., :3, :3]

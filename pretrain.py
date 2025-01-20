@@ -41,7 +41,7 @@ def main(local_rank, args):
     if args.gpus > 1:
         distributed = True
         ip = os.environ.get("MASTER_ADDR", "127.0.0.1")
-        port = os.environ.get("MASTER_PORT", "20507")
+        port = os.environ.get("MASTER_PORT", "20508")
         hosts = int(os.environ.get("WORLD_SIZE", 1))  # number of nodes
         rank = int(os.environ.get("RANK", 0))  # node id
         gpus = torch.cuda.device_count()  # gpus per node
