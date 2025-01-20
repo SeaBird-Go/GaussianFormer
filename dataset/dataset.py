@@ -22,6 +22,7 @@ class NuScenesDataset(Dataset):
         num_samples=0,
         vis_scene_index=-1,
         phase='train',
+        load_interval=1,
         return_keys=[
             'img',
             'projection_mat',
@@ -39,6 +40,8 @@ class NuScenesDataset(Dataset):
         self.scene_infos = data['infos']
         self.keyframes = data['metadata']
         self.keyframes = sorted(self.keyframes, key=lambda x: x[0] + "{:0>3}".format(str(x[1])))
+
+        self.keyframes = self.keyframes[::load_interval]
 
         self.data_aug_conf = data_aug_conf
         self.test_mode = (phase != 'train')
