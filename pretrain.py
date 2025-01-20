@@ -209,8 +209,15 @@ def main(local_rank, args):
                     'target_imgs': data['target_imgs']
                 }
                 for loss_input_key, loss_input_val in cfg.loss_input_convertion.items():
-                    loss_input.update({
-                        loss_input_key: result_dict[loss_input_val]})
+                    if loss_input_val in result_dict:
+                        loss_input.update({
+                            loss_input_key: result_dict[loss_input_val]})
+                    elif loss_input_val in data:
+                        loss_input.update({
+                            loss_input_key: data[loss_input_val]})
+                    else:
+                        pass
+                    
                 loss, loss_dict = loss_func(loss_input)
                 loss = loss / grad_accumulation
             if not amp:
