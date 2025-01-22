@@ -217,7 +217,7 @@ def main(local_rank, args):
                             loss_input_key: data[loss_input_val]})
                     else:
                         pass
-                    
+
                 loss, loss_dict = loss_func(loss_input)
                 loss = loss / grad_accumulation
             if not amp:
@@ -317,29 +317,58 @@ def main(local_rank, args):
                         'target_imgs': data['target_imgs']
                     }
                     for loss_input_key, loss_input_val in cfg.loss_input_convertion.items():
-                        loss_input.update({
-                            loss_input_key: result_dict[loss_input_val]})
+                        if loss_input_val in result_dict:
+                            loss_input.update({
+                                loss_input_key: result_dict[loss_input_val]})
+                        elif loss_input_val in data:
+                            loss_input.update({
+                                loss_input_key: data[loss_input_val]})
+                        else:
+                            pass
+                    
                     loss, loss_dict = loss_func(loss_input)
                 
                 if local_rank == 0:
                     ## visualize the results
                     render_rgb = result_dict['render_rgb']
                     gt_img = data['target_imgs']
+
+                    vis_elements_list = [
+                        VisElement(
+                            gt_img[0],
+                            type='rgb',
+                            need_denormalize=False,
+                        ),
+                        VisElement(
+                            render_rgb[0],
+                            type='rgb',
+                            need_denormalize=False,
+                        )
+                    ]
+                    
+                    if 'render_gt_depth' in loss_input:
+                        render_depth = result_dict['render_depth'].squeeze(2)
+                        gt_depth = loss_input['render_gt_depth']
+
+                        vis_elements_list.extend(
+                            [
+                                VisElement(
+                                    render_depth[0],
+                                    type='depth',
+                                    is_sparse=True,
+                                ),
+                                VisElement(
+                                    gt_depth[0],
+                                    type='depth',
+                                    is_sparse=True,
+                                )
+                            ]
+                        )
+                        
                     target_size = (render_rgb.shape[-2], render_rgb.shape[-1])  # (H, W)
                     # target_size = (180, 320)
                     visualize_elements(
-                        [
-                            VisElement(
-                                gt_img[0],
-                                type='rgb',
-                                need_denormalize=False,
-                            ),
-                            VisElement(
-                                render_rgb[0],
-                                type='rgb',
-                                need_denormalize=False,
-                            ),
-                        ],
+                        vis_elements_list,
                         target_size=target_size,
                         save_dir=save_dir
                     )
