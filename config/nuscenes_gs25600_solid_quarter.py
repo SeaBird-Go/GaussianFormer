@@ -2,67 +2,17 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-01-21 10:39:42
+Date: 2025-02-08 09:44:46
 Email: haimingzhang@link.cuhk.edu.cn
-Description: Pretrain the GaussinFormer by image and depth reconstruction from 3DGS.
+Description: Load_interval=4
 '''
 _base_ = [
-    '../_base_/misc.py',
-    '../_base_/model.py',
-    # './_base_/surroundocc.py'
+    './_base_/misc.py',
+    './_base_/model.py',
+    './_base_/surroundocc.py'
 ]
 
 # =========== data config ==============
-data_root = "data/nuscenes/"
-anno_root = "data/nuscenes_cam/"
-occ_path = "data/surroundocc/samples"
-batch_size = 1
-
-render_size = (432, 800)  # (h, w)
-
-img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True
-)
-
-train_pipeline = [
-    dict(
-        type="LoadPointsFromFile",
-        coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
-    ),
-    dict(type="LoadMultiViewImageFromFiles", to_float32=True),
-    # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
-    dict(type="ResizeCropFlipImage"),
-    # dict(type="PhotoMetricDistortionMultiViewImage"),
-    dict(type="PrepapreImageInputs", img_size=render_size),
-    dict(type="NormalizeMultiviewImage", **img_norm_cfg),
-    dict(type="PointToMultiViewDepth",
-         render_size=render_size
-    ),
-    dict(type="DefaultFormatBundle"),
-    dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
-]
-
-test_pipeline = [
-    dict(
-        type="LoadPointsFromFile",
-        coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
-    ),
-    dict(type="LoadMultiViewImageFromFiles", to_float32=True),
-    # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
-    dict(type="ResizeCropFlipImage"),
-    dict(type="PrepapreImageInputs", img_size=render_size),
-    dict(type="NormalizeMultiviewImage", **img_norm_cfg),
-    dict(type="PointToMultiViewDepth",
-         render_size=render_size
-    ),
-    dict(type="DefaultFormatBundle"),
-    dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
-]
-
 input_shape = (1600, 864)
 data_aug_conf = {
     "resize_lim": (1.0, 1.0),
@@ -71,63 +21,15 @@ data_aug_conf = {
     "rot_lim": (0.0, 0.0),
     "H": 900,
     "W": 1600,
-    "rand_flip": False,
+    "rand_flip": True,
 }
-
-dataset_type = "NuScenesDatasetOverfit"
-
-train_dataset_config = dict(
-    type=dataset_type,
-    data_root=data_root,
-    imageset=anno_root + "nuscenes_infos_train_sweeps_occ.pkl",
-    data_aug_conf=data_aug_conf,
-    pipeline=train_pipeline,
-    phase='train',
-    return_keys=[
-        'img',
-        'projection_mat',  # lidar2img actually
-        'image_wh',
-        'cam_positions',
-        'focal_positions',
-        'K', 'inv_K',
-        'target_imgs',
-        'lidar2cam',
-        'render_gt_depth'
-    ],
-)
-
 val_dataset_config = dict(
-    type=dataset_type,
-    data_root=data_root,
-    imageset=anno_root + "nuscenes_infos_train_sweeps_occ.pkl",
+    data_aug_conf=data_aug_conf
+)
+train_dataset_config = dict(
     data_aug_conf=data_aug_conf,
-    pipeline=test_pipeline,
-    phase='val',
-    return_keys=[
-        'img',
-        'projection_mat',  # lidar2img actually
-        'image_wh',
-        'cam_positions',
-        'focal_positions',
-        'K', 'inv_K',
-        'target_imgs',
-        'lidar2cam',
-        'render_gt_depth'
-    ],
+    load_interval=4
 )
-
-train_loader = dict(
-    batch_size=batch_size,
-    num_workers=4,
-    shuffle=True
-)
-
-val_loader = dict(
-    batch_size=batch_size,
-    num_workers=4
-)
-
-
 # =========== misc config ==============
 optimizer = dict(
     optimizer = dict(
@@ -138,37 +40,37 @@ optimizer = dict(
             'img_backbone': dict(lr_mult=0.1)}
     )
 )
-
-warmup_iters = 10
-
-
 grad_max_norm = 35
 # ========= model config ===============
 loss = dict(
     type='MultiLoss',
     loss_cfgs=[
         dict(
-            type='PhotometricLoss',
+            type='OccupancyLoss',
             weight=1.0,
-            input_dict=dict(
-                pred_rgb='render_rgb',
-                gt_rgb='target_imgs')
-        ),
-        dict(
-            type='DepthLoss',
-            weight=0.05,
-            input_dict=dict(
-                pred_depth='render_depth',
-                gt_depth='render_gt_depth')
-        )
-    ])
+            empty_label=17,
+            num_classes=18,
+            use_focal_loss=False,
+            use_dice_loss=False,
+            balance_cls_weight=True,
+            multi_loss_weights=dict(
+                loss_voxel_ce_weight=10.0,
+                loss_voxel_lovasz_weight=1.0),
+            use_sem_geo_scal_loss=False,
+            use_lovasz_loss=True,
+            lovasz_ignore=17,
+            manual_class_weight=[
+                1.01552756, 1.06897009, 1.30013094, 1.07253735, 0.94637502, 1.10087012,
+                1.26960524, 1.06258364, 1.189019,   1.06217292, 1.00595144, 0.85706115,
+                1.03923299, 0.90867526, 0.8936431,  0.85486129, 0.8527829,  0.5       ])
+        ])
 
 loss_input_convertion = dict(
-    render_rgb="render_rgb",
-    render_depth="render_depth",
-    render_gt_depth="render_gt_depth"
+    pred_occ="pred_occ",
+    sampled_xyz="sampled_xyz",
+    sampled_label="sampled_label",
+    occ_mask="occ_mask"
 )
-
 # ========= model config ===============
 embed_dims = 128
 num_decoder = 4
@@ -178,7 +80,6 @@ scale_range = [0.08, 0.64]
 xyz_coordinate = 'cartesian'
 phi_activation = 'sigmoid'
 include_opa = True
-include_color = True
 load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
 semantics = True
 semantic_dim = 17
@@ -210,7 +111,6 @@ model = dict(
         semantics=semantics,
         semantic_dim=semantic_dim,
         include_opa=include_opa,
-        include_color=include_color,
     ),
     encoder=dict(
         type='GaussianOccEncoder',
@@ -218,7 +118,6 @@ model = dict(
             type='SparseGaussian3DEncoder',
             embed_dims=embed_dims, 
             include_opa=include_opa,
-            include_color=include_color,
             semantics=semantics,
             semantic_dim=semantic_dim
         ),
@@ -252,7 +151,6 @@ model = dict(
             semantics=semantics,
             semantic_dim=semantic_dim,
             include_opa=include_opa,
-            include_color=include_color,
             xyz_coordinate=xyz_coordinate,
             semantics_activation='softplus',
         ),
@@ -284,9 +182,20 @@ model = dict(
         ] * (num_decoder - num_single_frame_decoder),
     ),
     head=dict(
-        type='GaussianReconHead',
+        type='GaussianHead',
         apply_loss_type='random_1',
-        render_size=render_size,
-        depth_range=[0.1, 64.0],
+        num_classes=semantic_dim + 1,
+        empty_args=dict(
+            _delete_=True,
+            mean=[0, 0, -1.0],
+            scale=[100, 100, 8.0],
+        ),
+        with_empty=True,
+        cuda_kwargs=dict(
+            _delete_=True,
+            scale_multiplier=3,
+            H=200, W=200, D=16,
+            pc_min=[-50.0, -50.0, -5.0],
+            grid_size=0.5),
     )
 )
