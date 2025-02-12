@@ -45,11 +45,20 @@ train_pipeline = [
 ]
 
 test_pipeline = [
+    dict(
+        type="LoadPointsFromFile",
+        coord_type="LIDAR",
+        load_dim=5,
+        use_dim=5,
+    ),
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
     dict(type="ResizeCropFlipImage"),
     dict(type="PrepapreImageInputs", img_size=render_size),
     dict(type="NormalizeMultiviewImage", **img_norm_cfg),
+    dict(type="PointToMultiViewDepth",
+         render_size=render_size
+    ),
     dict(type="DefaultFormatBundle"),
     dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
 ]
@@ -104,6 +113,7 @@ val_dataset_config = dict(
         'K', 'inv_K',
         'target_imgs',
         'lidar2cam',
+        'render_gt_depth'
     ],
 )
 
@@ -143,7 +153,7 @@ loss = dict(
         ),
         dict(
             type='DepthLoss',
-            weight=1.0,
+            weight=0.05,
             input_dict=dict(
                 pred_depth='render_depth',
                 gt_depth='render_gt_depth')

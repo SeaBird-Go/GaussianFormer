@@ -27,7 +27,8 @@ val_dataset_config = dict(
     data_aug_conf=data_aug_conf
 )
 train_dataset_config = dict(
-    data_aug_conf=data_aug_conf
+    data_aug_conf=data_aug_conf,
+    load_interval=4
 )
 
 # =========== misc config ==============
@@ -37,7 +38,7 @@ optimizer = dict(
     ),
     paramwise_cfg=dict(
         custom_keys={
-            'img_backbone': dict(lr_mult=0.1)}
+            'img_backbone': dict(lr_mult=0.05)}
     )
 )
 grad_max_norm = 35
@@ -82,7 +83,7 @@ phi_activation = 'sigmoid'
 include_opa = True
 include_color = True
 # load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
-load_from = 'out/pretrain/nuscenes_gs25600_solid_pretrain_rgb_only/epoch_20.pth'
+load_from = 'nuscenes_gs25600_solid_pretrain_rgb_depth_e20.pth'
 semantics = True
 semantic_dim = 17
 
@@ -98,7 +99,7 @@ model = dict(
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
-        with_cp = True,
+        with_cp = False,
         dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False), # original DCNv2 will print log when perform load_state_dict
         stage_with_dcn=(False, False, True, True)),
     img_neck=dict(
