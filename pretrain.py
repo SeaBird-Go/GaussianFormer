@@ -355,7 +355,6 @@ def main(local_rank, args):
                                 VisElement(
                                     render_depth[0],
                                     type='depth',
-                                    is_sparse=True,
                                 ),
                                 VisElement(
                                     gt_depth[0],
