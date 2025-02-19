@@ -2,6 +2,7 @@ from ...utils.safe_ops import safe_sigmoid, safe_inverse_sigmoid
 import torch, torch.nn as nn
 from torch import Tensor
 from typing import NamedTuple
+from dataclasses import dataclass
 
 
 def spherical2cartesian(anchor, pc_range, phi_activation='loop'):
@@ -59,7 +60,8 @@ def linear_relu_ln(embed_dims, in_loops, out_loops, input_dims=None):
     return layers
 
 
-class GaussianPrediction(NamedTuple):
+@dataclass
+class GaussianPrediction:
     means: Tensor
     scales: Tensor
     rotations: Tensor
@@ -67,3 +69,5 @@ class GaussianPrediction(NamedTuple):
     semantics: Tensor
     original_means: Tensor = None
     delta_means: Tensor = None
+    harmonics: Tensor = None
+    covariances: Tensor = None

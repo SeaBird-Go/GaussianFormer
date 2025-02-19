@@ -15,6 +15,8 @@ class GaussianLifter(BaseLifter):
         semantics=False,
         semantic_dim=None,
         include_opa=True,
+        include_color=False,
+        sh_degree=4,
         pts_init=False,
         xyz_activation="sigmoid",
         scale_activation="sigmoid",
@@ -49,7 +51,15 @@ class GaussianLifter(BaseLifter):
             semantic_dim = 0
         semantic = torch.randn(num_anchor, semantic_dim, dtype=torch.float)
 
-        anchor = torch.cat([xyz, scale, rots, opacity, semantic], dim=-1)
+        self.include_color = include_color
+        if include_color:
+            d_sh = (sh_degree + 1) ** 2
+            color_dim = 3 * d_sh
+            color = torch.randn(num_anchor, color_dim, dtype=torch.float)
+        else:
+            color = torch.zeros(num_anchor, 0, dtype=torch.float)
+
+        anchor = torch.cat([xyz, scale, rots, opacity, semantic, color], dim=-1)
 
         self.num_anchor = num_anchor
         self.anchor = nn.Parameter(
