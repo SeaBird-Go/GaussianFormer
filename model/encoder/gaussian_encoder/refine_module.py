@@ -287,3 +287,88 @@ class SparseGaussian3DRefinementModulePretrain(SparseGaussian3DRefinementModule)
 
         output = torch.cat([output, sh_pred], dim=-1)
         return output, gaussian
+    
+
+@MODELS.register_module()
+class SparseGaussian3DRefinementModulePretrainV2(SparseGaussian3DRefinementModule):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+        assert self.include_color, "Must include color when pretraining."
+
+        self.adapter_layer = nn.Sequential(
+            *linear_relu_ln(self.output_dim, 1, 2),
+            nn.Linear(self.output_dim, self.output_dim),
+            Scale([1.0] * self.output_dim))
+        
+    def forward(
+        self,
+        instance_feature: torch.Tensor,
+        anchor: torch.Tensor,
+        anchor_embed: torch.Tensor,
+    ):
+        output_tmp = self.layers(instance_feature + anchor_embed)
+        output = self.adapter_layer(output_tmp)
+        
+        if self.restrict_xyz:
+            delta_xyz_sigmoid = output[..., :3]
+            delta_xyz_prob = 2 * safe_sigmoid(delta_xyz_sigmoid) - 1
+            delta_xyz = torch.stack([
+                delta_xyz_prob[..., 0] * self.unit_sigmoid[0],
+                delta_xyz_prob[..., 1] * self.unit_sigmoid[1],
+                delta_xyz_prob[..., 2] * self.unit_sigmoid[2]
+            ], dim=-1)
+            output = torch.cat([delta_xyz, output[..., 3:]], dim=-1)
+        
+        if len(self.refine_state) > 0:
+            refined_part_output = output[..., self.refine_state] + anchor[..., self.refine_state]
+            output = torch.cat([refined_part_output, output[..., len(self.refine_state):]], dim=-1)
+
+        if self.xyz_act == "sigmoid":
+            xyz = output[..., :3]
+        else:
+            xyz = output[..., :3].clamp(min=1e-6, max=1-1e-6)
+        
+        if self.scale_act == "sigmoid":
+            scale = output[..., 3:6]
+        else:
+            scale = output[..., 3:6].clamp(min=1e-6, max=1-1e-6)
+
+        rot = torch.nn.functional.normalize(output[..., 6:10], dim=-1)
+        output = torch.cat([xyz, scale, rot, output[..., 10:]], dim=-1)
+        
+        if self.xyz_act == 'sigmoid':
+            xyz = safe_sigmoid(xyz)
+        xxx = xyz[..., 0] * (self.pc_range[3] - self.pc_range[0]) + self.pc_range[0]
+        yyy = xyz[..., 1] * (self.pc_range[4] - self.pc_range[1]) + self.pc_range[1]
+        zzz = xyz[..., 2] * (self.pc_range[5] - self.pc_range[2]) + self.pc_range[2]
+        xyz = torch.stack([xxx, yyy, zzz], dim=-1)
+
+        if self.scale_act == 'sigmoid':
+            gs_scales = safe_sigmoid(scale)
+        gs_scales = self.scale_range[0] + (self.scale_range[1] - self.scale_range[0]) * gs_scales
+        
+        semantics = output[..., self.semantic_start: (self.semantic_start + self.semantic_dim)]
+        if self.semantics_activation == 'softmax':
+            semantics = semantics.softmax(dim=-1)
+        elif self.semantics_activation == 'softplus':
+            semantics = F.softplus(semantics)
+
+        ## process the color
+        sh = output[..., (self.semantic_start + self.semantic_dim):]
+        sh = rearrange(sh, "... (xyz d_sh) -> ... xyz d_sh", xyz=3)
+        harmonics = sh * self.sh_mask
+        
+        gaussian = GaussianPrediction(
+            means=xyz,
+            scales=gs_scales,
+            rotations=rot,
+            opacities=safe_sigmoid(output[..., 10: (10 + int(self.include_opa))]),
+            semantics=semantics,
+            harmonics=harmonics
+        )
+
+        return output, gaussian
