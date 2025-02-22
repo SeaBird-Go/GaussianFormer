@@ -38,7 +38,7 @@ optimizer = dict(
     ),
     paramwise_cfg=dict(
         custom_keys={
-            'img_backbone': dict(lr_mult=0.05)}
+            'img_backbone': dict(lr_mult=0.5)}
     )
 )
 grad_max_norm = 35
@@ -84,6 +84,7 @@ include_opa = True
 include_color = True
 # load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
 load_from = 'nuscenes_gs25600_solid_pretrain_rgb_depth_e20.pth'
+# load_from = 'out/nuscenes_gs25600_solid_pretrain_rgb_depth_v2/nuscenes_gs25600_solid_pretrain_rgb_depth_v2.pth'
 semantics = True
 semantic_dim = 17
 
