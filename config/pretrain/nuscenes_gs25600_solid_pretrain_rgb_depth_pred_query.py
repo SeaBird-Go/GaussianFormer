@@ -2,9 +2,9 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-02-19 16:45:47
+Date: 2025-02-19 16:56:21
 Email: haimingzhang@link.cuhk.edu.cn
-Description: 
+Description: Predict the query during the pre-training stage.
 '''
 _base_ = [
     '../_base_/misc.py',
@@ -45,20 +45,11 @@ train_pipeline = [
 ]
 
 test_pipeline = [
-    dict(
-        type="LoadPointsFromFile",
-        coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
-    ),
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
     dict(type="ResizeCropFlipImage"),
     dict(type="PrepapreImageInputs", img_size=render_size),
     dict(type="NormalizeMultiviewImage", **img_norm_cfg),
-    dict(type="PointToMultiViewDepth",
-         render_size=render_size
-    ),
     dict(type="DefaultFormatBundle"),
     dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
 ]
@@ -113,7 +104,6 @@ val_dataset_config = dict(
         'K', 'inv_K',
         'target_imgs',
         'lidar2cam',
-        'render_gt_depth'
     ],
 )
 
@@ -153,7 +143,7 @@ loss = dict(
         ),
         dict(
             type='DepthLoss',
-            weight=0.05,
+            weight=1.0,
             input_dict=dict(
                 pred_depth='render_depth',
                 gt_depth='render_gt_depth')
@@ -238,7 +228,7 @@ model = dict(
             ),
         ),
         refine_layer=dict(
-            type='SparseGaussian3DRefinementModulePretrainV2',
+            type='SparseGaussian3DRefinementModule',
             embed_dims=embed_dims,
             pc_range=pc_range,
             scale_range=scale_range,
