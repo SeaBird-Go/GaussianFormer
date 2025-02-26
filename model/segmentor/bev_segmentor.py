@@ -91,6 +91,7 @@ class BEVSegmentor(CustomBaseSegmentor):
                 extra_backbone=False,
                 occ_only=False,
                 rep_only=False,
+                out_only=False,
                 **kwargs,
         ):
         """Forward training function.
@@ -116,6 +117,8 @@ class BEVSegmentor(CustomBaseSegmentor):
 
         results.update(outs)
         outs = self.encoder(**results)
+        if out_only:
+            return outs
         if rep_only:
             return outs['representation']
         results.update(outs)

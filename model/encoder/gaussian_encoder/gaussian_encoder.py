@@ -88,6 +88,8 @@ class GaussianOccEncoder(BaseEncoder):
         anchor_embed = self.anchor_encoder(anchor)
 
         prediction = []
+        anchor_list = []
+        instance_feature_list = []
         for i, op in enumerate(self.operation_order):
             if op == 'spconv':
                 instance_feature = self.layers[i](
@@ -99,6 +101,8 @@ class GaussianOccEncoder(BaseEncoder):
                 identity = instance_feature
             elif op == "add":
                 instance_feature = instance_feature + identity
+            elif op == "interact":
+                pass
             elif op == "deformable":
                 instance_feature = self.layers[i](
                     instance_feature,
@@ -115,9 +119,13 @@ class GaussianOccEncoder(BaseEncoder):
                 )
             
                 prediction.append({'gaussian': gaussian})
+                anchor_list.append({'anchor': anchor})
+                instance_feature_list.append({'instance_feature': instance_feature})
                 if i != len(self.operation_order) - 1:
                     anchor_embed = self.anchor_encoder(anchor)
             else:
                 raise NotImplementedError(f"{op} is not supported.")
 
-        return {"representation": prediction}
+        return {"representation": prediction,
+                "anchor": anchor_list,
+                "instance_feature": instance_feature_list}
