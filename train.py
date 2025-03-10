@@ -160,10 +160,10 @@ def main(local_rank, args):
         else:
             state_dict = ckpt
         try:
-            print(raw_model.load_state_dict(state_dict, strict=False))
+            logger.info(raw_model.load_state_dict(state_dict, strict=False))
         except:
             from misc.checkpoint_util import refine_load_from_sd
-            print(raw_model.load_state_dict(
+            logger.info(raw_model.load_state_dict(
                 refine_load_from_sd(state_dict), strict=False))
         
     # training
