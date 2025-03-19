@@ -2,9 +2,9 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-02-07 17:00:37
+Date: 2025-03-17 14:32:24
 Email: haimingzhang@link.cuhk.edu.cn
-Description: 
+Description: Use the pre-trained memory bank when finetuning the model.
 '''
 _base_ = [
     './_base_/misc.py',
@@ -83,8 +83,7 @@ phi_activation = 'sigmoid'
 include_opa = True
 include_color = True
 # load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
-load_from = 'out/nuscenes_gs25600_solid_pretrain_rgb_depth_w_extra_head/nuscenes_gs25600_solid_pretrain_rgb_depth_w_extra_head_wo_anchor.pth'
-# load_from = 'out/nuscenes_gs25600_solid_pretrain_rgb_depth_v2/nuscenes_gs25600_solid_pretrain_rgb_depth_v2.pth'
+load_from = 'out/pretrain/nuscenes_gs25600_solid_pretrain_rgb_depth_w_mb/epoch_20.pth'
 semantics = True
 semantic_dim = 17
 
@@ -172,6 +171,16 @@ model = dict(
             xyz_coordinate=xyz_coordinate,
             use_out_proj=True,
         ),
+        memory_bank=dict(
+            type="MemoryBank",
+            feature_dim=embed_dims,
+            capacity=256,
+        ),
+        finetune_stage=True,
+        interact_layer=dict(
+            type="MemoryBankInteraction",
+            feature_dim=embed_dims,
+        ),
         num_decoder=num_decoder,
         num_single_frame_decoder=num_single_frame_decoder,
         operation_order=[
@@ -182,6 +191,7 @@ model = dict(
         ] * num_single_frame_decoder + [
             "spconv",
             "norm",
+            "interact",
             "deformable",
             "ffn",
             "norm",

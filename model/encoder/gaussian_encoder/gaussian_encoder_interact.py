@@ -1,13 +1,24 @@
+'''
+Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
+
+Author: Haiming Zhang
+Date: 2025-03-11 16:17:35
+Email: haimingzhang@link.cuhk.edu.cn
+Description: Using the pre-trained feature bank for interaction.
+'''
+import torch
 from typing import List, Optional
 import torch, torch.nn as nn
+import torch.nn.functional as F
 
 from mmseg.registry import MODELS
+from mmengine.model import BaseModule
 from mmengine import build_from_cfg
 from ..base_encoder import BaseEncoder
 
 
 @MODELS.register_module()
-class GaussianOccEncoder(BaseEncoder):
+class GaussianOccEncoderInteract(BaseEncoder):
     def __init__(
         self,
         anchor_encoder: dict,
@@ -19,9 +30,6 @@ class GaussianOccEncoder(BaseEncoder):
         spconv_layer: dict = None,
         num_decoder: int = 6,
         operation_order: Optional[List[str]] = None,
-        memory_bank=None,
-        interact_layer=None,
-        finetune_stage=False,
         init_cfg=None,
         **kwargs,
     ):
@@ -54,7 +62,6 @@ class GaussianOccEncoder(BaseEncoder):
             "refine": [refine_layer, MODELS],
             "mid_refine":[mid_refine_layer, MODELS],
             "spconv": [spconv_layer, MODELS],
-            "interact": [interact_layer, MODELS],
         }
         self.layers = nn.ModuleList(
             [
@@ -62,10 +69,6 @@ class GaussianOccEncoder(BaseEncoder):
                 for op in self.operation_order
             ]
         )
-
-        self.finetune_stage = finetune_stage
-        if memory_bank is not None:
-            self.memory_bank = build(memory_bank, MODELS)
         
     def init_weights(self):
         for i, op in enumerate(self.operation_order):
@@ -95,9 +98,6 @@ class GaussianOccEncoder(BaseEncoder):
 
         anchor_embed = self.anchor_encoder(anchor)
 
-        if hasattr(self, "memory_bank"):
-            memory_bank_feature = self.memory_bank.get_memory()
-        
         prediction = []
         anchor_list = []
         instance_feature_list = []
@@ -113,7 +113,7 @@ class GaussianOccEncoder(BaseEncoder):
             elif op == "add":
                 instance_feature = instance_feature + identity
             elif op == "interact":
-                instance_feature = self.layers[i](instance_feature, memory_bank_feature)
+                pass
             elif op == "deformable":
                 instance_feature = self.layers[i](
                     instance_feature,
@@ -137,14 +137,6 @@ class GaussianOccEncoder(BaseEncoder):
             else:
                 raise NotImplementedError(f"{op} is not supported.")
 
-        ## update the memory bank
-        if hasattr(self, "memory_bank") and not self.finetune_stage:
-            feature_recon_ = instance_feature_list[-1]['instance_feature'].detach() # (bs, N, C)
-            feature_recon = feature_recon_.mean(dim=1) # (bs, C)
-            self.memory_bank.update(
-                feature_recon,
-                alpha=0.5
-            )
         return {"representation": prediction,
                 "anchor": anchor_list,
                 "instance_feature": instance_feature_list}

@@ -17,7 +17,7 @@ ckpt_path = "out/nuscenes_gs25600_solid_pretrain_rgb_depth/epoch_20.pth"
 ckpt_path = "nuscenes_gs25600_solid_pretrain_rgb_depth_e20.pth"
 # ckpt_path = "out/nuscenes_gs25600_solid_quarter/epoch_20.pth"
 ckpt_path = "./ckpts/nuscenes_gs25600_solid.pth"
-ckpt_path = "out/nuscenes_gs12500_solid_pretrain_rgb_depth_216x400_layers_2/epoch_20.pth"
+ckpt_path = "out/nuscenes_gs25600_solid_pretrain_rgb_depth_w_extra_head/epoch_20.pth"
 ckpt = torch.load(ckpt_path, map_location="cpu")
 try:
     state_dict = ckpt["state_dict"]
@@ -41,13 +41,13 @@ def remove_keys(state_dict):
 # print(state_dict['encoder.layers.21.layers.11.scale'])
 
 # dump the state_dict to a text file
-# with open("r101_dcn_fcos3d_pretrain.txt", "w") as f:
+# with open("nuscenes_gs25600_solid_finetune.txt", "w") as f:
 #     for k, v in state_dict.items():
 #         f.write(f"{k}: {v.size()}\n")
 
 remove_keys(state_dict)
 
 # 保存修改后的 checkpoint  
-new_checkpoint_path = "out/nuscenes_gs12500_solid_pretrain_rgb_depth_216x400_layers_2/nuscenes_gs12500_solid_pretrain_rgb_depth_216x400_layers_2_wo_anchor.pth"  # 替换为保存的新文件路径  
+new_checkpoint_path = "out/nuscenes_gs25600_solid_pretrain_rgb_depth_w_extra_head/nuscenes_gs25600_solid_pretrain_rgb_depth_w_extra_head_wo_anchor.pth"  # 替换为保存的新文件路径  
 torch.save(ckpt, new_checkpoint_path)  
 print(f"Modified checkpoint saved to: {new_checkpoint_path}")

@@ -5,3 +5,4 @@ from .spconv3d_module import SparseConv3D
 from .anchor_encoder_module import SparseGaussian3DEncoder
 from .ffn_module import AsymmetricFFN
 from .gaussian_encoder import GaussianOccEncoder
+from .memory_bank_interact import MemoryBankInteraction, MemoryBank
