@@ -95,3 +95,36 @@ class GaussianLifter(BaseLifter):
             'representation': anchor,
             'anchor_init': self.anchor.clone()
         }
+    
+
+@MODELS.register_module()
+class GaussianLifterWithPretrainAnchors(GaussianLifter):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+    def forward(self, ms_img_feats, metas, ssp_representation=None, **kwargs):
+        batch_size = ms_img_feats[0].shape[0]
+        instance_feature = torch.tile(
+            self.instance_feature[None], (batch_size, 1, 1)
+        )
+        if ssp_representation is None:
+            anchor = torch.tile(self.anchor[None], (batch_size, 1, 1))
+        else:
+            assert isinstance(ssp_representation, list)
+            
+            pretrained_anchors = ssp_representation[-1]['gaussian']
+            anchors_xyz = pretrained_anchors.means
+            
+            if self.xyz_act == "sigmoid":
+                xyz = safe_inverse_sigmoid(anchors_xyz)
+            anchor = torch.cat([
+                xyz, torch.tile(self.anchor[None, :, 3:], (batch_size, 1, 1))], dim=-1)
+
+        return {
+            'rep_features': instance_feature,
+            'representation': anchor,
+            'anchor_init': self.anchor.clone()
+        }

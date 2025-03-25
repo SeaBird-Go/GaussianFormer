@@ -129,6 +129,9 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         outs = self.extract_img_feat(**results)
         results.update(outs)
 
+        # Update the results with the SSP results
+        results.update({f"ssp_{key}": value for key, value in ssp_results.items()})
+
         # torch.cuda.synchronize()
         # start_time = time.perf_counter()
         outs = self.lifter(**results)
@@ -137,9 +140,6 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         # results.update({"lifter_time": elapsed})
 
         results.update(outs)
-
-        # Update the results with the SSP results
-        results.update({f"{key}_ssp": value for key, value in ssp_results.items()})
 
         outs = self.encoder(**results)
         if out_only:
