@@ -106,8 +106,8 @@ def main_dump_state_dict_keys(ckpt_path, save_path):
 
 
 if __name__ == "__main__":
-    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_ssp_model.pth"
-    main_dump_state_dict_keys(ckpt_path, save_path="ssp_model.txt")
+    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_backbone_only.pth"
+    main_dump_state_dict_keys(ckpt_path, save_path="nuscenes_gs25600_solid_pretrain_depth_only_backbone_only.txt")
     exit(0)
     main_construct_ssp_finetune_weight()
     exit(0)

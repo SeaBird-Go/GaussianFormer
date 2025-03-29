@@ -9,7 +9,7 @@ from ...utils.safe_ops import safe_sigmoid
 from ...utils.utils import get_rotation_matrix
 from .utils import linear_relu_ln
 try:
-    from .ops import DeformableAggregationFunction as DAF
+    from deformable_aggregation import DeformableAggregationFunction as DAF
 except:
     DAF = None
 

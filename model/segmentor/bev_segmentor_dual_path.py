@@ -112,10 +112,10 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         """Forward training function.
         """
         ## 1) Forward the sparse splating pre-training (SSP) model
-        self.ssp_model.eval()
-        with torch.no_grad():
-            ssp_results = self.ssp_model(imgs=imgs, metas=metas, 
-                                         out_only=True, points=points, **kwargs)
+        # self.ssp_model.eval()
+        # with torch.no_grad():
+        #     ssp_results = self.ssp_model(imgs=imgs, metas=metas, 
+        #                                  out_only=True, points=points, **kwargs)
             
         if extra_backbone:
             return self.forward_extra_img_backbone(imgs=imgs)
@@ -130,7 +130,7 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         results.update(outs)
 
         # Update the results with the SSP results
-        results.update({f"ssp_{key}": value for key, value in ssp_results.items()})
+        # results.update({f"ssp_{key}": value for key, value in ssp_results.items()})
 
         # torch.cuda.synchronize()
         # start_time = time.perf_counter()
@@ -140,7 +140,6 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         # results.update({"lifter_time": elapsed})
 
         results.update(outs)
-
         outs = self.encoder(**results)
         if out_only:
             return outs

@@ -36,7 +36,7 @@ def make_cuda_ext(
 
     return extension(
         name="{}.{}".format(module, name),
-        sources=[os.path.join(*module.split("."), p) for p in sources],
+        sources=[p for p in sources],
         include_dirs=extra_include_path,
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -46,10 +46,11 @@ def make_cuda_ext(
 if __name__ == "__main__":
     setup(
         name="deformable_aggregation_ext",
+        packages=["deformable_aggregation"],
         ext_modules=[
             make_cuda_ext(
                 "deformable_aggregation_ext",
-                module=".",
+                module="deformable_aggregation",
                 sources=[
                     f"src/deformable_aggregation.cpp",
                     f"src/deformable_aggregation_cuda.cu",
