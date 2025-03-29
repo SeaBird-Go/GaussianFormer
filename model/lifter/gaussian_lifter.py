@@ -97,6 +97,16 @@ class GaussianLifter(BaseLifter):
         }
     
 
+def normalize_xyz(xyz, pc_range):
+    scan = xyz.clone()
+    if scan.dim() == 2:
+        scan = scan.unsqueeze(0)
+    scan[..., 0] = (scan[..., 0] - pc_range[0]) / (pc_range[3] - pc_range[0])
+    scan[..., 1] = (scan[..., 1] - pc_range[1]) / (pc_range[4] - pc_range[1])
+    scan[..., 2] = (scan[..., 2] - pc_range[2]) / (pc_range[5] - pc_range[2])
+    return scan
+
+
 @MODELS.register_module()
 class GaussianLifterWithPretrainAnchors(GaussianLifter):
     def __init__(
@@ -117,6 +127,7 @@ class GaussianLifterWithPretrainAnchors(GaussianLifter):
             
             pretrained_anchors = ssp_representation[-1]['gaussian']
             anchors_xyz = pretrained_anchors.means
+            anchors_xyz = normalize_xyz(anchors_xyz, pc_range=[-50.0, -50.0, -5.0, 50.0, 50.0, 3.0])
             
             if self.xyz_act == "sigmoid":
                 xyz = safe_inverse_sigmoid(anchors_xyz)
