@@ -83,6 +83,7 @@ class ResizeCropFlipImage(object):
         imgs = results["img"]
         N = len(imgs)
         new_imgs = []
+        aug_mats = []
         for i in range(N):
             img = Image.fromarray(np.uint8(imgs[i]))
             img, ida_mat = self._img_transform(
@@ -98,9 +99,11 @@ class ResizeCropFlipImage(object):
             new_imgs.append(np.array(img).astype(np.float32))
             results["lidar2img"][i] = mat @ results["lidar2img"][i]
             results["ego2img"][i] = mat @ results["ego2img"][i]
+            aug_mats.append(mat)
 
         results["img"] = new_imgs
         results["img_shape"] = [x.shape[:2] for x in new_imgs]
+        results["aug_mats"] = aug_mats
         return results
 
     def _get_rot(self, h):
@@ -508,6 +511,7 @@ class PrepapreImageInputs(object):
     
     def __call__(self, results):
         img_aug = deepcopy(results['img'])
+        aug_mats = np.stack(results['aug_mats'])
 
         ## resize the image
         imgs = [
@@ -516,10 +520,10 @@ class PrepapreImageInputs(object):
         ]
 
         # process multiple imgs in single frame
-        imgs = [img.transpose(2, 0, 1) for img in imgs]
+        imgs = [img.transpose(2, 0, 1) for img in imgs]  # to (c, h, w)
         results['target_imgs'] = np.ascontiguousarray(np.stack(imgs, axis=0))
 
-        results['K'] = torch.from_numpy(results['cam_intrinsic']).to(torch.float32)
+        results['K'] = torch.from_numpy(aug_mats @ results['cam_intrinsic']).to(torch.float32)
         ## process the intrinsic matrix
         ori_shape = results['img_shape'][0]
         origin_h, origin_w = ori_shape[0], ori_shape[1]

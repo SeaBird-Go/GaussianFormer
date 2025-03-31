@@ -2,7 +2,7 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-03-27 10:33:10
+Date: 2025-02-07 17:00:37
 Email: haimingzhang@link.cuhk.edu.cn
 Description: 
 '''
@@ -80,8 +80,10 @@ scale_range = [0.08, 0.64]
 xyz_coordinate = 'cartesian'
 phi_activation = 'sigmoid'
 include_opa = True
+include_color = True
 # load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
 load_from = 'out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_wo_anchor.pth'
+# load_from = 'out/nuscenes_gs25600_solid_pretrain_rgb_depth_v2/nuscenes_gs25600_solid_pretrain_rgb_depth_v2.pth'
 semantics = True
 semantic_dim = 17
 
@@ -97,7 +99,7 @@ model = dict(
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
-        with_cp = True,
+        with_cp = False,
         dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False), # original DCNv2 will print log when perform load_state_dict
         stage_with_dcn=(False, False, True, True)),
     img_neck=dict(
@@ -113,6 +115,7 @@ model = dict(
         semantics=semantics,
         semantic_dim=semantic_dim,
         include_opa=include_opa,
+        include_color=include_color,
     ),
     encoder=dict(
         type='GaussianOccEncoder',
@@ -120,6 +123,7 @@ model = dict(
             type='SparseGaussian3DEncoder',
             embed_dims=embed_dims, 
             include_opa=include_opa,
+            include_color=include_color,
             semantics=semantics,
             semantic_dim=semantic_dim
         ),
@@ -153,6 +157,7 @@ model = dict(
             semantics=semantics,
             semantic_dim=semantic_dim,
             include_opa=include_opa,
+            include_color=include_color,
             xyz_coordinate=xyz_coordinate,
             semantics_activation='softplus',
         ),
