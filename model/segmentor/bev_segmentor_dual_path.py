@@ -27,6 +27,7 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         # use_post_fusion=False,
         ssp_model=None,
         freeze_ssp=True,
+        use_ssp_backbone=False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -35,6 +36,9 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         self.freeze_img_backbone = freeze_img_backbone
         self.freeze_img_neck = freeze_img_neck
         self.img_backbone_out_indices = img_backbone_out_indices
+
+        # whether using image backbone and neck modules from SSP pre-training model
+        self.use_ssp_backbone = use_ssp_backbone
         # self.use_post_fusion = use_post_fusion
         if ssp_model is not None:
             self.ssp_model = SEGMENTORS.build(ssp_model)
@@ -114,23 +118,26 @@ class BEVSegmentorDualPath(CustomBaseSegmentor):
         ## 1) Forward the sparse splating pre-training (SSP) model
         # self.ssp_model.eval()
         # with torch.no_grad():
-        #     ssp_results = self.ssp_model(imgs=imgs, metas=metas, 
-        #                                  out_only=True, points=points, **kwargs)
+        ssp_results = self.ssp_model(imgs=imgs, metas=metas, 
+                                     out_only=True, points=points, **kwargs)
             
-        if extra_backbone:
-            return self.forward_extra_img_backbone(imgs=imgs)
-        
         results = {
             'imgs': imgs,
             'metas': metas,
             'points': points
         }
         results.update(kwargs)
-        outs = self.extract_img_feat(**results)
-        results.update(outs)
 
         # Update the results with the SSP results
-        # results.update({f"ssp_{key}": value for key, value in ssp_results.items()})
+        results.update({f"ssp_{key}": value for key, value in ssp_results.items()})
+
+        if self.use_ssp_backbone:
+            outs = dict()
+            outs['ms_img_feats'] = results['ssp_ms_img_feats']
+        else:
+            outs = self.extract_img_feat(**results)
+        
+        results.update(outs)
 
         # torch.cuda.synchronize()
         # start_time = time.perf_counter()
