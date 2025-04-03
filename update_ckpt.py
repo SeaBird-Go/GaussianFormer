@@ -29,7 +29,6 @@ def remove_keys(state_dict, keys_to_remove):
             print(f"Removed key: {key}")  
         else:  
             print(f"Key not found: {key}")
-    return state_dict
 
 
 def remove_keys_with_prefix(state_dict, prefix_to_remove):
@@ -51,9 +50,15 @@ def add_prefix_to_keys(state_dict, prefix_to_add):
     return new_state_dict
 
 
-def main_remove_query_weights(state_dict):
+def main_remove_query_weights(dir_name):
+    ckpt_path = f"out/pretrain/{dir_name}/epoch_20.pth"
+    ckpt = torch.load(ckpt_path, map_location="cpu")
+    try:
+        state_dict = ckpt["state_dict"]
+    except:
+        state_dict = ckpt
+
     keys_to_remove = ["lifter.anchor", "lifter.instance_feature"]
-    keys_to_remove = []
     remove_keys(state_dict, keys_to_remove)
 
     # 保存修改后的 checkpoint  
@@ -106,22 +111,24 @@ def main_dump_state_dict_keys(ckpt_path, save_path):
 
 
 if __name__ == "__main__":
-    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_backbone_only.pth"
-    main_dump_state_dict_keys(ckpt_path, save_path="nuscenes_gs25600_solid_pretrain_depth_only_backbone_only.txt")
+    # dir_name = "nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_fix"
+    # main_remove_query_weights(dir_name)
+    # exit(0)
+    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_rgb_depth_quarter/nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_wo_anchor.pth"
+    main_dump_state_dict_keys(ckpt_path, save_path="nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_wo_anchor.txt")
     exit(0)
-    main_construct_ssp_finetune_weight()
-    exit(0)
-    print("====================")
-    dir_name = "nuscenes_gs25600_solid_pretrain_depth_only"
+    # main_construct_ssp_finetune_weight()
+    # exit(0)
+    dir_name = "nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_fix"
     ckpt_path = f"out/pretrain/{dir_name}/epoch_20.pth"
-    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_ssp_model.pth"
+    # ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_depth_only/nuscenes_gs25600_solid_pretrain_depth_only_ssp_model.pth"
     ckpt = torch.load(ckpt_path, map_location="cpu")
     try:
         state_dict = ckpt["state_dict"]
     except:
         state_dict = ckpt
 
-    dump_state_dict_keys(state_dict, "nuscenes_gs25600_solid_pretrain_depth_only.txt")
+    # dump_state_dict_keys(state_dict, "nuscenes_gs25600_solid_pretrain_depth_only.txt")
     
     prefix_to_remove = ['lifter', 'encoder', 'head']
     new_state_dict = remove_keys_with_prefix(state_dict, prefix_to_remove)
