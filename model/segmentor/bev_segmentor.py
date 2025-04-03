@@ -13,6 +13,7 @@ class BEVSegmentor(CustomBaseSegmentor):
         freeze_img_backbone=False,
         freeze_img_neck=False,
         freeze_lifter=False,
+        freeze_encoder=False,
         img_backbone_out_indices=[1, 2, 3],
         extra_img_backbone=None,
         # use_post_fusion=False,
@@ -34,6 +35,8 @@ class BEVSegmentor(CustomBaseSegmentor):
             self.lifter.requires_grad_(False)
             if hasattr(self.lifter, "random_anchors"):
                 self.lifter.random_anchors.requires_grad = True
+        if freeze_encoder:
+            self.encoder.requires_grad_(False)
         if extra_img_backbone is not None:
             self.extra_img_backbone = build_backbone(extra_img_backbone)
 
@@ -118,6 +121,8 @@ class BEVSegmentor(CustomBaseSegmentor):
         results.update(outs)
         outs = self.encoder(**results)
         if out_only:
+            ## here we output the image features
+            outs['ms_img_feats'] = results['ms_img_feats']  # list type: [(b, n, c, h, w)]
             return outs
         if rep_only:
             return outs['representation']

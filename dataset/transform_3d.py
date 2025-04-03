@@ -388,6 +388,8 @@ class LoadPointsFromFile(object):
                  use_dim=[0, 1, 2],
                  shift_height=False,
                  use_color=False,
+                 need_filter_points=False,
+                 pc_range=[-50.0, -50.0, -5.0, 50.0, 50.0, 3.0],
                  file_client_args=dict(backend='disk')):
         self.shift_height = shift_height
         self.use_color = use_color
@@ -402,6 +404,9 @@ class LoadPointsFromFile(object):
         self.use_dim = use_dim
         self.file_client_args = file_client_args.copy()
         self.file_client = None
+        # for anchor points for supervision, we need to filter the point clouds
+        self.need_filter_points = need_filter_points
+        self.pc_range = pc_range
 
     def _load_points(self, pts_filename):
         """Private function to load point clouds data.
@@ -465,6 +470,18 @@ class LoadPointsFromFile(object):
         points = points_class(
             points, points_dim=points.shape[-1], attribute_dims=attribute_dims)
         results['points'] = points
+
+        if self.need_filter_points:
+            scan = points.tensor[..., :3]
+            norm = np.linalg.norm(scan, 2, axis=-1)
+            mask = (scan[:, 0] > self.pc_range[0]) & (scan[:, 0] < self.pc_range[3]) & \
+                   (scan[:, 1] > self.pc_range[1]) & (scan[:, 1] < self.pc_range[4]) & \
+                   (scan[:, 2] > self.pc_range[2]) & (scan[:, 2] < self.pc_range[5]) & \
+                   (norm > 1.0)
+            scan = scan[mask]
+
+            # NOTE: here we do not normalize the anchor points
+            results['filter_points'] = scan
 
         return results
 
