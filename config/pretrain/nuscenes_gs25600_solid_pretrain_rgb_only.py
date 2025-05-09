@@ -65,7 +65,7 @@ train_dataset_config = dict(
     data_aug_conf=data_aug_conf,
     pipeline=train_pipeline,
     phase='train',
-    load_interval=2,
+    load_interval=4,
     return_keys=[
         'img',
         'projection_mat',  # lidar2img actually

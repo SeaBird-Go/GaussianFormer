@@ -8,7 +8,7 @@ Description:
 '''
 import os
 import os.path as osp
-from tqdm import tqdm
+from collections import OrderedDict
 import numpy as np
 import pickle
 import torch
@@ -50,12 +50,21 @@ def add_prefix_to_keys(state_dict, prefix_to_add):
     return new_state_dict
 
 
+def revise_ckpts(state_dict, revise_keys):
+    for p, r in revise_keys:
+        state_dict = OrderedDict(
+            {k.replace(p, r): v
+             for k, v in state_dict.items()})
+    
+    return state_dict
+
+
 def main_remove_query_weights(dir_name):
     ckpt_path = f"out/pretrain/{dir_name}/epoch_20.pth"
     ckpt = torch.load(ckpt_path, map_location="cpu")
-    try:
+    if "state_dict" in state_dict:
         state_dict = ckpt["state_dict"]
-    except:
+    else:
         state_dict = ckpt
 
     keys_to_remove = ["lifter.anchor", "lifter.instance_feature"]
@@ -111,11 +120,36 @@ def main_dump_state_dict_keys(ckpt_path, save_path):
 
 
 if __name__ == "__main__":
-    # dir_name = "nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_fix"
-    # main_remove_query_weights(dir_name)
-    # exit(0)
-    ckpt_path = "out/pretrain/nuscenes_gs25600_solid_pretrain_rgb_depth_quarter/nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_wo_anchor.pth"
-    main_dump_state_dict_keys(ckpt_path, save_path="nuscenes_gs25600_solid_pretrain_rgb_depth_quarter_wo_anchor.txt")
+    ckpt_path = "ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960.pth"
+    main_dump_state_dict_keys(ckpt_path, save_path="./ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960.txt")
+
+    ckpt = torch.load(ckpt_path, map_location="cpu")
+    
+    flag = False
+    if "state_dict" in ckpt:
+        state_dict = ckpt["state_dict"]
+        flag = True
+    else:
+        state_dict = ckpt
+    
+    new_state_dict = revise_ckpts(state_dict, [("backbone", "img_backbone")])
+
+    save_path = "./ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960_new.txt"
+    dump_state_dict_keys(new_state_dict, save_path)
+
+    if flag:
+        ckpt['state_dict'] = new_state_dict
+    else:
+        ckpt = new_state_dict
+    
+    # 保存修改后的 checkpoint
+    new_checkpoint_path = f"ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960_new.pth"  # 替换为保存的新文件路径
+    torch.save(ckpt, new_checkpoint_path)
+    
+    exit(0)
+
+    dir_name = "nuscenes_gs25600_solid_pretrain_rgb_only"
+    main_remove_query_weights(dir_name)
     exit(0)
     # main_construct_ssp_finetune_weight()
     # exit(0)

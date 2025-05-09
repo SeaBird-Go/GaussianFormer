@@ -2,9 +2,10 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-01-20 11:26:30
+Date: 2025-05-02 20:37:22
 Email: haimingzhang@link.cuhk.edu.cn
-Description: Pretrain the GaussinFormer by image and depth reconstruction from 3DGS.
+Description: Use ResNet 50 as backbone and use the image input is 256x704 and the 
+pc range is [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0].
 '''
 _base_ = [
     '../_base_/misc.py',
@@ -18,54 +19,36 @@ anno_root = "data/nuscenes_cam/"
 occ_path = "data/surroundocc/samples"
 batch_size = 1
 
-render_size = (432, 800)  # (h, w)
+render_size = (128, 352)  # (h, w)
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True
 )
 
 train_pipeline = [
-    dict(
-        type="LoadPointsFromFile",
-        coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
-    ),
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
     dict(type="ResizeCropFlipImage"),
     # dict(type="PhotoMetricDistortionMultiViewImage"),
     dict(type="PrepapreImageInputs", img_size=render_size),
     dict(type="NormalizeMultiviewImage", **img_norm_cfg),
-    dict(type="PointToMultiViewDepth",
-         render_size=render_size
-    ),
     dict(type="DefaultFormatBundle"),
     dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
 ]
 
 test_pipeline = [
-    dict(
-        type="LoadPointsFromFile",
-        coord_type="LIDAR",
-        load_dim=5,
-        use_dim=5,
-    ),
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     # dict(type="LoadOccupancySurroundOcc", occ_path=occ_path, semantic=True, use_ego=False),
     dict(type="ResizeCropFlipImage"),
     dict(type="PrepapreImageInputs", img_size=render_size),
     dict(type="NormalizeMultiviewImage", **img_norm_cfg),
-    dict(type="PointToMultiViewDepth",
-         render_size=render_size
-    ),
     dict(type="DefaultFormatBundle"),
     dict(type="NuScenesAdaptor", use_ego=False, num_cams=6),
 ]
 
-input_shape = (1600, 864)
+input_shape = (704, 256)
 data_aug_conf = {
-    "resize_lim": (1.0, 1.0),
+    "resize_lim": (0.44, 0.44),
     "final_dim": input_shape[::-1],
     "bot_pct_lim": (0.0, 0.0),
     "rot_lim": (0.0, 0.0),
@@ -93,7 +76,6 @@ train_dataset_config = dict(
         'K', 'inv_K',
         'target_imgs',
         'lidar2cam',
-        'render_gt_depth'
     ],
 )
 
@@ -113,7 +95,6 @@ val_dataset_config = dict(
         'K', 'inv_K',
         'target_imgs',
         'lidar2cam',
-        'render_gt_depth'
     ],
 )
 
@@ -150,33 +131,25 @@ loss = dict(
             input_dict=dict(
                 pred_rgb='render_rgb',
                 gt_rgb='target_imgs')
-        ),
-        dict(
-            type='DepthLoss',
-            weight=0.05,
-            input_dict=dict(
-                pred_depth='render_depth',
-                gt_depth='render_gt_depth')
         )
     ])
 
 loss_input_convertion = dict(
     render_rgb="render_rgb",
     render_depth="render_depth",
-    render_gt_depth="render_gt_depth"
 )
 
 # ========= model config ===============
 embed_dims = 128
 num_decoder = 4
 num_single_frame_decoder = 1
-pc_range = [-50.0, -50.0, -5.0, 50.0, 50.0, 3.0]
+pc_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 scale_range = [0.08, 0.64]
 xyz_coordinate = 'cartesian'
 phi_activation = 'sigmoid'
 include_opa = True
 include_color = True
-load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+load_from = 'ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960_new.pth'
 semantics = True
 semantic_dim = 17
 
@@ -185,16 +158,14 @@ model = dict(
     img_backbone=dict(
         _delete_=True,
         type='ResNet',
-        depth=101,
+        depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='BN2d', requires_grad=False),
+        norm_cfg=dict(type='BN2d', requires_grad=True),
         norm_eval=True,
-        style='caffe',
-        with_cp = True,
-        dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False), # original DCNv2 will print log when perform load_state_dict
-        stage_with_dcn=(False, False, True, True)),
+        style='pytorch',
+        with_cp=True),
     img_neck=dict(
         start_level=1),
     lifter=dict(

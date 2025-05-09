@@ -2,9 +2,9 @@
 Copyright (c) 2025 by Haiming Zhang. All Rights Reserved.
 
 Author: Haiming Zhang
-Date: 2025-01-20 11:26:30
+Date: 2025-05-01 00:04:28
 Email: haimingzhang@link.cuhk.edu.cn
-Description: Pretrain the GaussinFormer by image and depth reconstruction from 3DGS.
+Description: 
 '''
 _base_ = [
     '../_base_/misc.py',
@@ -144,16 +144,16 @@ grad_max_norm = 35
 loss = dict(
     type='MultiLoss',
     loss_cfgs=[
-        dict(
-            type='PhotometricLoss',
-            weight=1.0,
-            input_dict=dict(
-                pred_rgb='render_rgb',
-                gt_rgb='target_imgs')
-        ),
+        # dict(
+        #     type='PhotometricLoss',
+        #     weight=1.0,
+        #     input_dict=dict(
+        #         pred_rgb='render_rgb',
+        #         gt_rgb='target_imgs')
+        # ),
         dict(
             type='DepthLoss',
-            weight=0.05,
+            weight=0.1,
             input_dict=dict(
                 pred_depth='render_depth',
                 gt_depth='render_gt_depth')
@@ -176,7 +176,7 @@ xyz_coordinate = 'cartesian'
 phi_activation = 'sigmoid'
 include_opa = True
 include_color = True
-load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+load_from = 'ckpts/cascade_mask_rcnn_r50_fpn_coco-20e_20e_nuim_20201009_124951-40963960_new.pth'
 semantics = True
 semantic_dim = 17
 
@@ -185,16 +185,14 @@ model = dict(
     img_backbone=dict(
         _delete_=True,
         type='ResNet',
-        depth=101,
+        depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='BN2d', requires_grad=False),
+        norm_cfg=dict(type='BN2d', requires_grad=True),
         norm_eval=True,
-        style='caffe',
-        with_cp = True,
-        dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False), # original DCNv2 will print log when perform load_state_dict
-        stage_with_dcn=(False, False, True, True)),
+        style='pytorch',
+        with_cp=True),
     img_neck=dict(
         start_level=1),
     lifter=dict(

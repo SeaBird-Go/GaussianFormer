@@ -350,6 +350,9 @@ def main(local_rank, args):
                         render_depth = result_dict['render_depth'].squeeze(2)
                         gt_depth = loss_input['render_gt_depth']
 
+                        print(f"render depth: min: {render_depth.min()} max: {render_depth.max()}")
+                        print(f"render_gt_depth depth: min: {gt_depth.min()} max: {gt_depth.max()}")
+
                         vis_elements_list.extend(
                             [
                                 VisElement(

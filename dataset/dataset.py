@@ -194,5 +194,11 @@ class NuScenesDatasetOverfit(NuScenesDataset):
         return 1000
     
     def __getitem__(self, idx):
-        idx = 50
+        idx = 80
         return super().__getitem__(idx)
+    
+
+@OPENOCC_DATASET.register_module()
+class NuScenesDatasetOverfitVal(NuScenesDatasetOverfit):
+    def __len__(self):
+        return 4
