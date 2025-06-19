@@ -13,7 +13,7 @@ if os.environ.get('DISP', 'f') == 'f':
 try:
     from mayavi import mlab
     import mayavi
-    mlab.options.offscreen = offscreen
+    mlab.options.offscreen = True
     print("Set mlab.options.offscreen={}".format(mlab.options.offscreen))
 except:
     print("No Mayavi installation found.")
@@ -311,6 +311,7 @@ def save_occ(
     if offscreen:
         mlab.savefig(filepath)
     else:
+        mlab.savefig(filepath)
         mlab.show()
     mlab.close()
 

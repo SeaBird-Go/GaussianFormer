@@ -817,6 +817,31 @@ class LoadOccupancySurroundOcc(object):
 
 
 @OPENOCC_TRANSFORMS.register_module()
+class LoadOccupancyOcc3D(LoadOccupancySurroundOcc):
+    def __init__(self, occ_path):
+        self.occ_path = occ_path
+
+        # NOTE: ego coordinate
+        xyz = self.get_meshgrid([-40, -40, -1.0, 40, 40, 5.4], [200, 200, 16], 0.4)
+        self.xyz = np.concatenate([xyz, np.ones_like(xyz[..., :1])], axis=-1) # x, y, z, 4
+
+    def __call__(self, results):
+        occ_gt_path = os.path.join(self.occ_path, results['occ_path'])
+
+        occ_labels = np.load(occ_gt_path)
+        semantics = occ_labels['semantics']
+        mask_camera = occ_labels['mask_camera']
+
+        results['occ_label'] = semantics
+        results['occ_cam_mask'] = mask_camera
+
+        xyz = self.xyz.copy()
+        results['occ_xyz'] = xyz[..., :3]
+
+        return results
+    
+
+@OPENOCC_TRANSFORMS.register_module()
 class LoadOccupancyKITTI360(object):
 
     def __init__(self, occ_path, semantic=False, unknown_to_empty=False, training=False):
